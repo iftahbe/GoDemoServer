@@ -2,14 +2,20 @@ package Server
 
 import (
 	"net/http"
+	"github.com/ravendb/ravendb-go-client"
+	"github.com/GoDemoServer/Entity"
 )
 
 func (s *Server) Store(w http.ResponseWriter, r *http.Request) {
 
-	session := s.DocumentStoreHolder.Store.OpenSession()
+	session, err := s.DocumentStoreHolder.Store.OpenSession()
+	if err != nil {
+		ErrorResponse(w, 500, err.Error())
+		return
+	}
 	defer session.Close()
 
-	c := Company{
+	c := Entity.Company{
 		Name:       "Hibernating Rhinos",
 		ExternalId: "HR",
 		Phone:      "+972 4 622 7811",
@@ -17,9 +23,7 @@ func (s *Server) Store(w http.ResponseWriter, r *http.Request) {
 
 	session.Store(c)
 
-	err := session.SaveChanges()
-
-	if err != nil {
+	if err = session.SaveChanges(); err != nil {
 		ErrorResponse(w, 500, err.Error())
 		return
 	}
@@ -28,17 +32,26 @@ func (s *Server) Store(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Edit(w http.ResponseWriter, r *http.Request) {
-	session := s.DocumentStoreHolder.Store.OpenSession()
+	session, err := s.DocumentStoreHolder.Store.OpenSession()
+	if err != nil {
+		ErrorResponse(w, 500, err.Error())
+		return
+	}
 	defer session.Close()
 
-	var result *Company
-	err := session.Load(&result, "companies/1")
+	// pluralize() is not fully implemented, this needs to change to companies/1-A
+	obj, err := session.Load(ravendb.GetTypeOf(&Entity.Company{}), "companys/1-A")
 	if err != nil {
 		ErrorResponse(w, 500, err.Error())
 		return
 	}
 
-	result.Name = "Hibernating Bears"
+	doc, ok := obj.(*Entity.Company)
+	if !ok{
+		ErrorResponse(w, 500, "Type assertion failed")
+		return
+	}
+	doc.Name = "Hibernating Elephants"
 
 	err3 := session.SaveChanges()
 	if err3 != nil {
@@ -50,20 +63,23 @@ func (s *Server) Edit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Delete(w http.ResponseWriter, r *http.Request) {
-	session := s.DocumentStoreHolder.Store.OpenSession()
+	session, err := s.DocumentStoreHolder.Store.OpenSession()
+	if err != nil {
+		ErrorResponse(w, 500, err.Error())
+		return
+	}
 	defer session.Close()
 
-	var result *Company
-
-	err := session.Load(&result, "companies/1")
+	// pluralize() is not fully implemented, this needs to change to companies/1-A
+	obj, err := session.Load(ravendb.GetTypeOf(&Entity.Company{}), "companys/1-A")
 	if err != nil {
 		ErrorResponse(w, 500, err.Error())
 		return
 	}
 
-	err2 := session.DeleteEntity(result)
-	if err2 != nil {
-		ErrorResponse(w, 500, err2.Error())
+	err = session.DeleteEntity(obj)
+	if err != nil {
+		ErrorResponse(w, 500, err.Error())
 		return
 	}
 
@@ -75,3 +91,4 @@ func (s *Server) Delete(w http.ResponseWriter, r *http.Request) {
 
 	JsonResponse(w, 201, map[string]string{"Result": "Success"})
 }
+

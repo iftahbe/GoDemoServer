@@ -50,10 +50,3 @@ func JsonResponse(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-type Company struct {
-	Name		string `json:"Name"`
-	ExternalId  string `json:"ExternalId"`
-	Phone       string `json:"Phone"`
-	Fax 		string `json:"Fax"`
-}
-
